@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastSeen  DateTime @default(now())
+
+  playerClass PlayerClass @default(KNIGHT)
+
+  level      Int @default(1)
+  experience Int @default(0)
+  gold       Int @default(0)
+  hp         Int @default(100)
+  maxHp      Int @default(100)
+  mana       Int @default(55)
+  maxMana    Int @default(55)
+  attack     Int @default(10)
+  defense    Int @default(5)
+  speed       Int    @default(10)
+  currentZone String @default("town")
+  posX        Int    @default(10)
+  posY        Int    @default(6)
+
+  inventory        InventoryItem[]
+  mailSent         Mail[]          @relation("MailSender")
+  mailReceived     Mail[]          @relation("MailReceiver")
+  marketListings   MarketListing[]
+  partyMemberships PartyMember[]
+  skills           PlayerSkill[]
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  type        ItemType
+  rarity      Rarity   @default(COMMON)
+  value       Int      @default(1)
+
+  hpBonus      Int        @default(0)
+  manaBonus    Int        @default(0)
+  manaCost     Int        @default(0)
+  attackBonus  Int        @default(0)
+  defenseBonus Int        @default(0)
+  speedBonus   Int        @default(0)
+  weaponSkill  SkillType?
+
+  clubSkillBonus      Int @default(0)
+  axeSkillBonus       Int @default(0)
+  swordSkillBonus     Int @default(0)
+  distanceSkillBonus  Int @default(0)
+  shieldingSkillBonus Int @default(0)
+  magicSkillBonus     Int @default(0)
+
+  requiredLevel Int         @default(1)
+  requiredClass PlayerClass?
+  range         Int         @default(1)
+
+  inventoryItems  InventoryItem[]
+  marketListings  MarketListing[]
+  mailAttachments MailAttachment[]
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  HELMET
+  LEGS
+  BOOTS
+  ACCESSORY
+  CONSUMABLE
+  MATERIAL
+}
+
+enum Rarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum SkillType {
+  CLUB
+  AXE
+  SWORD
+  DISTANCE
+  SHIELDING
+  MAGIC
+}
+
+enum PlayerClass {
+  KNIGHT
+  SORCERER
+  PALADIN
+  DRUID
+}
+
+model PlayerSkill {
+  id       String    @id @default(cuid())
+  playerId String
+  skill    SkillType
+  level    Int       @default(10)
+  points   Int       @default(0)
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, skill])
+}
+
+model InventoryItem {
+  id       String  @id @default(cuid())
+  playerId String
+  itemId   String
+  quantity Int     @default(1)
+  equipped Boolean @default(false)
+
+  player Player @relation(fields: [playerId], references: [id])
+  item   Item   @relation(fields: [itemId], references: [id])
+
+  @@unique([playerId, itemId])
+}
+
+model MarketListing {
+  id        String   @id @default(cuid())
+  sellerId  String
+  itemId    String
+  quantity  Int
+  priceEach Int
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  active    Boolean  @default(true)
+
+  seller Player @relation(fields: [sellerId], references: [id])
+  item   Item   @relation(fields: [itemId], references: [id])
+}
+
+model Mail {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  subject    String
+  body       String
+  goldAmount Int      @default(0)
+  read       Boolean  @default(false)
+  claimed    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender      Player         @relation("MailSender", fields: [senderId], references: [id])
+  receiver    Player         @relation("MailReceiver", fields: [receiverId], references: [id])
+  attachments MailAttachment[]
+}
+
+model MailAttachment {
+  id       String @id @default(cuid())
+  mailId   String
+  itemId   String
+  quantity Int
+
+  mail Mail @relation(fields: [mailId], references: [id])
+  item Item @relation(fields: [itemId], references: [id])
+}
+
+model Party {
+  id        String      @id @default(cuid())
+  leaderId  String
+  createdAt DateTime    @default(now())
+  members   PartyMember[]
+}
+
+model PartyMember {
+  id       String @id @default(cuid())
+  partyId  String
+  playerId String
+
+  party  Party  @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId])
+}
+
+model Monster {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  level       Int
+  hp          Int
+  maxHp       Int
+  attack      Int
+  defense     Int
+  expReward   Int
+  goldMin     Int
+  goldMax     Int
+  isBoss      Boolean @default(false)
+  respawnSecs Int     @default(60)
+  zone        String  @default("world")
+}
